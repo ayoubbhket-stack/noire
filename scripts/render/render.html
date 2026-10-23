@@ -1,0 +1,114 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<style>html,body{margin:0;background:#f3eee6}</style></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { buildBottle, makeStudioEnv } from '/src/lib/three/bottle.js';
+
+const W = 1100, H = 1100;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const envTex = makeStudioEnv(THREE, renderer);
+
+const BGS = {
+  cream: ['#f6f1e9', '#e9dfd0'], blush: ['#f7ece8', '#ead6cf'], sage: ['#eef0e8', '#d9ddcf'],
+  sand: ['#f4ebdd', '#e2d1b8'], stone: ['#f1efec', '#dcd8d2'], night: ['#2b2622', '#171412'],
+};
+function bgTexture(kind = 'cream', w = 1024, h = 1024) {
+  const [a, b] = BGS[kind] || BGS.cream;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  const lin = g.createLinearGradient(0, 0, 0, h); lin.addColorStop(0, a); lin.addColorStop(1, b);
+  g.fillStyle = lin; g.fillRect(0, 0, w, h);
+  const r = g.createRadialGradient(w * 0.5, h * 0.42, 10, w * 0.5, h * 0.42, Math.max(w, h) * 0.6);
+  r.addColorStop(0, 'rgba(255,255,255,0.55)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h); for (let i = 0; i < d.data.length; i += 4) { const n = (Math.random() - 0.5) * 5; d.data[i] += n; d.data[i + 1] += n; d.data[i + 2] += n; } g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+function makeScene(bg, floorY) {
+  const scene = new THREE.Scene();
+  scene.environment = envTex;
+  scene.background = bgTexture(bg);
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(-8, 14, 10);
+  key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 8; key.shadow.camera.left = -20; key.shadow.camera.right = 20; key.shadow.camera.top = 20; key.shadow.camera.bottom = -20;
+  scene.add(key);
+  scene.add(new THREE.HemisphereLight(0xfff7ec, 0xd8c7ad, 0.9));
+  const warm = new THREE.PointLight(0xffd9a0, 60, 60); warm.position.set(9, 2, 6); scene.add(warm);
+  if (floorY != null) {
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ opacity: 0.16 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = floorY; floor.receiveShadow = true; scene.add(floor);
+  }
+  return scene;
+}
+function enableShadows(g) { g.traverse((o) => { if (o.isMesh) { o.castShadow = true; } }); }
+
+window.renderShot = (opts) => {
+  renderer.setSize(W, H);
+  const b = buildBottle(THREE, opts.style || {});
+  enableShadows(b);
+  const box0 = new THREE.Box3().setFromObject(b);
+  const scene = makeScene(opts.bg || 'cream', box0.min.y);
+  scene.add(b);
+  const a = opts.angle || 'front';
+  if (a === 'front') b.rotation.set(0, -0.32, 0);
+  else if (a === 'side') b.rotation.set(0, -1.05, 0);
+  else if (a === 'top') b.rotation.set(0, 0.5, 0);
+  const cam = new THREE.PerspectiveCamera(opts.fov || 24, W / H, 0.1, 200);
+  b.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(b);
+  const c = box.getCenter(new THREE.Vector3()); const sz = box.getSize(new THREE.Vector3());
+  const fit = (Math.max(sz.x, sz.y) / 2) / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+  const dist = fit * (opts.pad || 1.55);
+  const elev = a === 'top' ? 0.55 : 0.18;
+  cam.position.set(c.x, c.y + dist * elev, c.z + dist);
+  cam.lookAt(c.x, c.y - sz.y * 0.04, c.z);
+  renderer.render(scene, cam);
+  return renderer.domElement.toDataURL('image/jpeg', 0.88);
+};
+
+window.renderScene = (o) => {
+  const w = o.w || 1600, h = o.h || 1000;
+  renderer.setSize(w, h);
+  const scene = makeScene(o.bg || 'cream', o.floor ?? -5);
+  scene.background = bgTexture(o.bg || 'cream', w, h);
+  for (const it of o.items) {
+    const g = buildBottle(THREE, it.style || {});
+    enableShadows(g);
+    if (it.scale) g.scale.setScalar(it.scale);
+    g.rotation.set(...(it.rot || [0, 0, 0]));
+    g.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(g);
+    g.position.set(it.pos?.[0] || 0, (o.floor ?? -5) - bb.min.y + (it.pos?.[1] || 0), it.pos?.[2] || 0);
+    scene.add(g);
+  }
+  for (const f of (o.shapes || [])) {
+    const geo = f.kind === 'ring' ? new THREE.TorusGeometry(f.r || 3, f.t || 0.2, 24, 96)
+      : f.kind === 'sphere' ? new THREE.SphereGeometry(f.r || 1, 48, 32) : new THREE.CylinderGeometry(f.r || 2, f.r || 2, f.h || 1, 64);
+    const mat = new THREE.MeshPhysicalMaterial({ color: f.color || '#e7dccb', metalness: f.metal ? 1 : 0, roughness: f.metal ? 0.2 : 0.6, clearcoat: 0.4 });
+    const m = new THREE.Mesh(geo, mat); m.position.set(...f.pos); m.rotation.set(...(f.rot || [0, 0, 0]));
+    m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  }
+  const cam = new THREE.PerspectiveCamera(o.fov || 26, w / h, 0.1, 300);
+  cam.position.set(...(o.cam || [0, 2, 40])); cam.lookAt(...(o.look || [0, 0, 0]));
+  renderer.render(scene, cam);
+  const url = renderer.domElement.toDataURL('image/jpeg', 0.86);
+  renderer.setSize(W, H);
+  return url;
+};
+
+window.exportGLB = (style) => new Promise((res, rej) => {
+  const g = buildBottle(THREE, style);
+  new GLTFExporter().parse(g, (buf) => {
+    const bytes = new Uint8Array(buf); let s = ''; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    res(btoa(s));
+  }, rej, { binary: true });
+});
+window.ready = true;
+</script></body></html>
