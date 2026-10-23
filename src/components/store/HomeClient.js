@@ -14,7 +14,7 @@ export function HomeHero({ hero, poster, stats }) {
         <div className="hero-copy">
           {hero.eyebrow && <p className="eyebrow">{hero.eyebrow}</p>}
           <h1 className="display-xl" aria-label={hero.headline}>
-            {words.map((w, i) => <span className="word" key={i} aria-hidden="true"><span style={{ '--i': i }}>{w}</span>{i < words.length - 1 ? ' ' : ''}</span>)}
+            {words.map((w, i) => <span className="word" key={i} aria-hidden="true"><span style={{ '--i': i }}>{w}</span></span>)}
           </h1>
           <p className="lede">{hero.text}</p>
           <div className="row">
@@ -27,7 +27,7 @@ export function HomeHero({ hero, poster, stats }) {
         </div>
         <div className="hero-stage">
           <div className="halo" aria-hidden="true" />
-          <Viewer3D className="hero-canvas" mode="hero" eager drag={false} poster={poster} posterAlt={t('A perfume bottle turning slowly')}
+          <Viewer3D className="hero-canvas" mode="hero" eager drag={false} poster={poster} posterOnlyOnFail posterAlt={t('A perfume bottle turning slowly')}
             bottle={hero.bottle} fit={13} distance={40} initialY={-0.4} />
         </div>
       </div>

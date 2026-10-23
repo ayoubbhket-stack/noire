@@ -3,7 +3,7 @@
 // until the 3D scene is ready, and keeps it if WebGL is unavailable.
 import { useEffect, useRef, useState } from 'react';
 
-export default function Viewer3D({ bottle, modelUrl, mode = 'viewer', drag = true, poster, posterAlt = '', className = 'viewer', eager = false, ...opts }) {
+export default function Viewer3D({ bottle, modelUrl, mode = 'viewer', drag = true, poster, posterOnlyOnFail = false, posterAlt = '', className = 'viewer', eager = false, ...opts }) {
   const box = useRef(null);
   const api = useRef(null);
   const [ready, setReady] = useState(false);
@@ -38,7 +38,7 @@ export default function Viewer3D({ bottle, modelUrl, mode = 'viewer', drag = tru
 
   return (
     <div className={className} data-cursor={drag ? 'drag' : undefined} role="img" aria-label={posterAlt}>
-      {poster && <img src={poster} alt="" className={`poster${ready && !failed ? ' gone' : ''}`} fetchPriority={mode === 'hero' ? 'high' : undefined} />}
+      {poster && (!posterOnlyOnFail || failed) && <img src={poster} alt="" className={`poster${ready && !failed ? ' gone' : ''}`} fetchPriority={mode === 'hero' ? 'high' : undefined} />}
       <div ref={box} className="canvas-box" />
     </div>
   );
