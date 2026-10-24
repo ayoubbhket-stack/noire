@@ -5,7 +5,7 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@electric-sql/pglite', 'pg', 'bcryptjs'],
     // SQL migrations (auto-applied on first run) and sample images (loaded from /admin/setup)
-    outputFileTracingIncludes: { '/**': ['./drizzle/**'], '/api/admin/auth/setup': ['./seed-assets/**'] },
+    outputFileTracingIncludes: { '/**': ['./drizzle/**'], '/api/admin/auth/setup': ['./seed-assets/**'], '/api/admin/seed': ['./seed-assets/**'] },
   },
   async headers() {
     return [{

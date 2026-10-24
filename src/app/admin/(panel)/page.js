@@ -8,6 +8,8 @@ import { dailySeries, inventorySnapshot, parseRange, summary, topProducts } from
 import RangePicker from '@/components/admin/RangePicker';
 import { BarList, Pill, SalesChart } from '@/components/admin/server-ui';
 
+import SeedButton from '@/components/admin/SeedButton';
+
 export const metadata = { title: 'Dashboard' };
 const STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
 
@@ -27,6 +29,7 @@ export default async function Dashboard({ searchParams }) {
   return (
     <>
       {searchParams.denied && <div className="notice bad">Your role does not have access to that page.</div>}
+      {products === 0 && can(me, 'settings.write') && <SeedButton />}
       <div className="adm-head">
         <div><h1>Dashboard</h1><p className="sub">{r.from} → {r.to} · all figures from recorded orders</p></div>
         <RangePicker preset={r.preset} from={r.from} to={r.to} />
